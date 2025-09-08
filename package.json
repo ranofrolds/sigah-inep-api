@@ -1,5 +1,28 @@
 {
+  "name": "inep-school-scraper",
+  "version": "2.0.0",
+  "description": "Automação para download do catálogo de escolas do INEP - Refatorado com Clean Code",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node src/server.js",
+    "scraper": "node -e \"require('./src/services/scraper').downloadInepData()\""
+  },
+  "keywords": [
+    "inep",
+    "schools",
+    "automation",
+    "playwright",
+    "web-scraping"
+  ],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
+    "cors": "^2.8.5",
+    "csv-parser": "^3.2.0",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "node-cron": "^4.2.1",
     "playwright": "^1.55.0"
   }
 }
