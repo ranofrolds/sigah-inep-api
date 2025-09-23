@@ -94,14 +94,6 @@ curl -X POST http://localhost:3000/atualizar
 curl "http://localhost:3000/buscar?nome=adventista&uf=RO"
 ```
 
-## Princípios Aplicados
-
-- **YAGNI**: Apenas funcionalidades necessárias
-- **KISS**: Código simples e direto
-- **DRY**: Sem repetições
-- **SRP**: Uma responsabilidade por módulo
-- **Clean Code**: Nomes descritivos, funções pequenas
-
 ## Recursos
 
 ### 📁 Gerenciamento de Arquivos
@@ -113,10 +105,3 @@ curl "http://localhost:3000/buscar?nome=adventista&uf=RO"
 - Agendamento diário às 00:00 (configurável)
 - Backup automático antes de atualizar
 - Reload automático dos dados
-
-### 🔧 Melhorias de Clean Code
-- ✅ Separação de responsabilidades (SRP)
-- ✅ Configurações centralizadas 
-- ✅ Estrutura modular e simples
-- ✅ Código autoexplicativo
-- ✅ Tratamento de erros consistente
