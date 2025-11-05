@@ -1,6 +1,23 @@
 const swaggerJsdoc = require('swagger-jsdoc');
 const config = require('../config');
 
+const localServerUrl = `http://localhost:${config.port}${config.api.basePath || '/api'}`;
+const primaryServerUrl = config.api.publicUrl || localServerUrl;
+
+const servers = [
+  {
+    url: primaryServerUrl,
+    description: 'Servidor principal'
+  }
+];
+
+if (primaryServerUrl !== localServerUrl) {
+  servers.push({
+    url: localServerUrl,
+    description: 'Servidor local'
+  });
+}
+
 const swaggerDefinition = {
   openapi: '3.0.1',
   info: {
@@ -11,12 +28,7 @@ const swaggerDefinition = {
       'Permite consultar informacoes basicas, realizar buscas e acionar a atualizacao da base.'
     ].join(' ')
   },
-  servers: [
-    {
-      url: `http://localhost:${config.port}/api`,
-      description: 'Servidor local'
-    }
-  ],
+  servers,
   tags: [
     { name: 'Status', description: 'Monitoramento da aplicacao e metadados' },
     { name: 'Escolas', description: 'Consultas ao catalogo de escolas carregado em memoria' },

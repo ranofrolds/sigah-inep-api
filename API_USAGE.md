@@ -34,25 +34,25 @@ npm run scraper
 ```
 
 Quando a API sobe com sucesso, o terminal mostra as URLs principais:
-- `http://localhost:PORT/api` para o resumo da API
-- `http://localhost:PORT/docs` para a interface Swagger
-- `http://localhost:PORT/docs.json` para baixar o documento OpenAPI
+- `http://localhost:PORT/inep-api` para o resumo da API
+- `http://localhost:PORT/inep-api/docs` para a interface Swagger
+- `http://localhost:PORT/inep-api/docs.json` para baixar o documento OpenAPI
 
 ## 5. Documentacao via Swagger
 1. Inicie o servidor (`npm start`).
-2. Acesse `http://localhost:PORT/docs` em seu navegador.
+2. Acesse `http://localhost:PORT/inep-api/docs` em seu navegador.
 3. Utilize o botao **Try it out** para testar chamadas diretamente do navegador.
-4. Para importar em outros clientes (Insomnia, Postman, Hoppscotch), utilize `http://localhost:PORT/docs.json` como fonte OpenAPI.
+4. Para importar em outros clientes (Insomnia, Postman, Hoppscotch), utilize `http://localhost:PORT/inep-api/docs.json` como fonte OpenAPI.
 
 ## 6. Endpoints principais
 | Metodo | Rota                | Descricao                                                                 |
 | ------ | ------------------- | ------------------------------------------------------------------------- |
-| GET    | `/api`              | Resumo da API, versao e estatisticas de arquivos e escolas carregadas.   |
-| GET    | `/api/status`       | Status detalhado do cache, arquivos e agendamento de atualizacao.        |
-| POST   | `/api/atualizar`    | Dispara o download do catalogo do INEP e recarrega o cache na memoria.   |
-| GET    | `/api/escola/{codigo}` | Retorna uma escola pelo codigo INEP.                                  |
-| GET    | `/api/escolas`      | Lista escolas com paginacao (`pagina`, `limite`).                        |
-| GET    | `/api/buscar`       | Busca por filtros (`nome`, `municipio`, `uf`).                           |
+| GET    | `/inep-api`              | Resumo da API, versao e estatisticas de arquivos e escolas carregadas.   |
+| GET    | `/inep-api/status`       | Status detalhado do cache, arquivos e agendamento de atualizacao.        |
+| POST   | `/inep-api/atualizar`    | Dispara o download do catalogo do INEP e recarrega o cache na memoria.   |
+| GET    | `/inep-api/escola/{codigo}` | Retorna uma escola pelo codigo INEP.                                  |
+| GET    | `/inep-api/escolas`      | Lista escolas com paginacao (`pagina`, `limite`).                        |
+| GET    | `/inep-api/buscar`       | Busca por filtros (`nome`, `municipio`, `uf`).                           |
 
 ### Parametros relevantes
 - `pagina`: numero da pagina (padrao 1).
@@ -64,26 +64,26 @@ Quando a API sobe com sucesso, o terminal mostra as URLs principais:
 ## 7. Exemplos com curl
 ```bash
 # Resumo da API
-curl http://localhost:3000/api
+curl http://localhost:3000/inep-api
 
 # Status completo
-curl http://localhost:3000/api/status
+curl http://localhost:3000/inep-api/status
 
 # Disparar atualizacao manual
-curl -X POST http://localhost:3000/api/atualizar
+curl -X POST http://localhost:3000/inep-api/atualizar
 
 # Buscar uma escola pelo codigo INEP
-curl http://localhost:3000/api/escola/11000023
+curl http://localhost:3000/inep-api/escola/11000023
 
 # Listar escolas com paginacao
-curl "http://localhost:3000/api/escolas?pagina=2&limite=50"
+curl "http://localhost:3000/inep-api/escolas?pagina=2&limite=50"
 
 # Busca por filtros
-curl "http://localhost:3000/api/buscar?nome=adventista&uf=RO"
+curl "http://localhost:3000/inep-api/buscar?nome=adventista&uf=RO"
 ```
 
 ## 8. Estrutura das respostas
-### Sucesso (exemplo de `GET /api/escola/{codigo}`)
+### Sucesso (exemplo de `GET /inep-api/escola/{codigo}`)
 ```json
 {
   "escola": {
@@ -95,7 +95,7 @@ curl "http://localhost:3000/api/buscar?nome=adventista&uf=RO"
 }
 ```
 
-### Paginas (`GET /api/escolas`)
+### Paginas (`GET /inep-api/escolas`)
 ```json
 {
   "sucesso": true,
@@ -107,16 +107,16 @@ curl "http://localhost:3000/api/buscar?nome=adventista&uf=RO"
 ```
 
 ### Erros comuns
-- **503 Base nao carregada**: carregue dados via `POST /api/atualizar` antes de consultar escolas.
+- **503 Base nao carregada**: carregue dados via `POST /inep-api/atualizar` antes de consultar escolas.
 - **404 Escola nao encontrada**: codigo INEP inexistente na base carregada.
 - **500 Erro interno**: consultar logs do servidor para detalhes.
 
 ## 9. Rotina de atualizacao automatica
-- O agendamento diario (00:00 America/Sao_Paulo) executa a mesma logica de `POST /api/atualizar`.
+- O agendamento diario (00:00 America/Sao_Paulo) executa a mesma logica de `POST /inep-api/atualizar`.
 - O processo cria backup do CSV anterior e mantem apenas `current.csv` e `backup.csv`.
 - Para desabilitar, defina `DAILY_DOWNLOAD=false` no `.env`.
 
 ## 10. Dicas finais
 - Garanta que a pasta `data/downloads` seja gravavel; a aplicacao cria e atualiza os arquivos CSV nesse caminho.
-- Para atualizar clientes externos, exporte o documento em `http://localhost:PORT/docs.json`.
+- Para atualizar clientes externos, exporte o documento em `http://localhost:PORT/inep-api/docs.json`.
 - Caso rode dentro de container, exponha a porta configurada em `PORT`.

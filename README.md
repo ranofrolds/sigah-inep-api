@@ -1,6 +1,6 @@
 # API INEP - Catálogo de Escolas
 
-API RESTful (base path `/api`) para consulta do catálogo de escolas do INEP.
+API RESTful (base path `/inep-api`) para consulta do catálogo de escolas do INEP.
 
 ## Estrutura do Projeto
 
@@ -53,45 +53,45 @@ npm run scraper
 
 ### Informações da API
 ```
-GET /api
+GET /inep-api
 ```
 
 ### Status do Sistema
 ```
-GET /api/status
+GET /inep-api/status
 ```
 
 ### Atualizar Base de Dados
 ```
-POST /api/atualizar
+POST /inep-api/atualizar
 ```
 
 ### Buscar Escola por Código
 ```
-GET /api/escola/:codigo
+GET /inep-api/escola/:codigo
 ```
 
 ### Listar Escolas
 ```
-GET /api/escolas?pagina=1&limite=100
+GET /inep-api/escolas?pagina=1&limite=100
 ```
 
 ### Buscar Escolas por Filtros
 ```
-GET /api/buscar?nome=adventista&uf=RO&municipio=porto
+GET /inep-api/buscar?nome=adventista&uf=RO&municipio=porto
 ```
 
 ## Exemplos
 
 ```bash
 # Buscar escola específica
-curl http://localhost:3000/api/escola/11000023
+curl http://localhost:3000/inep-api/escola/11000023
 
 # Atualizar base
-curl -X POST http://localhost:3000/api/atualizar
+curl -X POST http://localhost:3000/inep-api/atualizar
 
 # Buscar por nome
-curl "http://localhost:3000/api/buscar?nome=adventista&uf=RO"
+curl "http://localhost:3000/inep-api/buscar?nome=adventista&uf=RO"
 ```
 
 ## Recursos
