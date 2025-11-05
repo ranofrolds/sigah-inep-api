@@ -1,6 +1,6 @@
 # API INEP - Catálogo de Escolas
 
-API RESTful para consulta do catálogo de escolas do INEP, refatorada com Clean Code.
+API RESTful (base path `/api`) para consulta do catálogo de escolas do INEP.
 
 ## Estrutura do Projeto
 
@@ -53,45 +53,45 @@ npm run scraper
 
 ### Informações da API
 ```
-GET /
+GET /api
 ```
 
 ### Status do Sistema
 ```
-GET /status
+GET /api/status
 ```
 
 ### Atualizar Base de Dados
 ```
-POST /atualizar
+POST /api/atualizar
 ```
 
 ### Buscar Escola por Código
 ```
-GET /escola/:codigo
+GET /api/escola/:codigo
 ```
 
 ### Listar Escolas
 ```
-GET /escolas?pagina=1&limite=100
+GET /api/escolas?pagina=1&limite=100
 ```
 
 ### Buscar Escolas por Filtros
 ```
-GET /buscar?nome=adventista&uf=RO&municipio=porto
+GET /api/buscar?nome=adventista&uf=RO&municipio=porto
 ```
 
 ## Exemplos
 
 ```bash
 # Buscar escola específica
-curl http://localhost:3000/escola/11000023
+curl http://localhost:3000/api/escola/11000023
 
 # Atualizar base
-curl -X POST http://localhost:3000/atualizar
+curl -X POST http://localhost:3000/api/atualizar
 
 # Buscar por nome
-curl "http://localhost:3000/buscar?nome=adventista&uf=RO"
+curl "http://localhost:3000/api/buscar?nome=adventista&uf=RO"
 ```
 
 ## Recursos

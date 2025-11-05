@@ -1,7 +1,7 @@
 {
   "name": "inep-school-scraper",
   "version": "2.0.0",
-  "description": "Automação para download do catálogo de escolas do INEP - Refatorado com Clean Code",
+  "description": "Automação para download do catálogo de escolas do INEP",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
@@ -23,6 +23,8 @@
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "node-cron": "^4.2.1",
-    "playwright": "^1.55.0"
+    "playwright": "^1.55.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
   }
 }

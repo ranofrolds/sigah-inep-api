@@ -1,21 +1,38 @@
 const express = require('express');
 const cors = require('cors');
+const swaggerUi = require('swagger-ui-express');
 const schoolRoutes = require('./routes/schools');
 const schoolService = require('./services/schools');
 const scheduler = require('./services/scheduler');
 const config = require('./config');
+const swaggerSpec = require('./docs/swagger');
+
+const API_BASE_PATH = '/api';
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-app.use('/', schoolRoutes);
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  explorer: true,
+  customSiteTitle: 'API INEP Docs'
+}));
+
+app.get('/docs.json', (req, res) => {
+  res.json(swaggerSpec);
+});
+
+app.use(API_BASE_PATH, schoolRoutes);
+
+app.get('/', (req, res) => {
+  res.redirect(`${API_BASE_PATH}/`);
+});
 
 app.use((req, res) => {
   res.status(404).json({
     erro: 'Endpoint não encontrado',
-    mensagem: 'Consulte GET / para ver os endpoints disponíveis'
+    mensagem: `Consulte GET ${API_BASE_PATH} ou a documentacao Swagger em /docs`
   });
 });
 
@@ -40,7 +57,8 @@ async function startServer() {
   
   app.listen(config.port, () => {
     console.log(`✅ Servidor rodando na porta ${config.port}`);
-    console.log(`📍 Acesse: http://localhost:${config.port}`);
+    console.log(`📍 Acesse: http://localhost:${config.port}${API_BASE_PATH}`);
+    console.log(`📘 Documentacao Swagger: http://localhost:${config.port}/docs`);
     console.log(`📊 Escolas carregadas: ${schoolService.getStats().totalSchools}`);
   });
 }
