@@ -32,10 +32,10 @@ async function downloadINEP() {
     
     // Navegar para a página
     console.log('📍 Acessando site do INEP...');
-    await page.goto(CONFIG.url, { waitUntil: 'networkidle' });
-    
+    await page.goto(CONFIG.url, { waitUntil: 'domcontentloaded', timeout: 90000 });
+
     // Aguardar página carregar
-    await page.waitForSelector('input[id^="saw_"]', { timeout: 30000 });
+    await page.waitForSelector('input[id^="saw_"]', { timeout: 90000 });
     await page.waitForTimeout(2000);
     
     // Encontrar e configurar campo de Região

@@ -61,8 +61,9 @@ function ensureDownloadDirectory() {
 
 async function navigateToInepSite(page) {
   console.log('📍 Acessando site do INEP...');
-  await page.goto(config.inep.url, { waitUntil: 'networkidle' });
-  await page.waitForSelector('input[id^="saw_"]', { timeout: 30000 });
+  // networkidle nunca chega: o dashboard do INEP fica fazendo requisições em segundo plano
+  await page.goto(config.inep.url, { waitUntil: 'domcontentloaded', timeout: 90000 });
+  await page.waitForSelector('input[id^="saw_"]', { timeout: 90000 });
   await page.waitForTimeout(2000);
 }
 
