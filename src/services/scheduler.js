@@ -44,11 +44,12 @@ class Scheduler {
     this.lastRun = new Date();
 
     try {
-      console.log('1/4 📦 Fazendo backup do arquivo atual...');
-      fileManager.backupCurrentFile();
-
-      console.log('2/4 ⬇️ Baixando novo catálogo...');
+      // Baixa antes do backup: se o download falhar, o current.csv continua intacto.
+      console.log('1/4 ⬇️ Baixando novo catálogo...');
       const tempFilePath = await downloadInepData();
+
+      console.log('2/4 📦 Fazendo backup do arquivo atual...');
+      fileManager.backupCurrentFile();
 
       console.log('3/4 💾 Salvando como arquivo atual...');
       const currentFilePath = fileManager.saveAsCurrentFile(tempFilePath);
