@@ -8,6 +8,8 @@ class Scheduler {
   constructor() {
     this.isRunning = false;
     this.lastRun = null;
+    this.lastSuccess = null;
+    this.lastError = null;
     this.nextRun = null;
   }
 
@@ -42,6 +44,7 @@ class Scheduler {
     console.log('🔄 Iniciando atualização automática diária...');
     this.isRunning = true;
     this.lastRun = new Date();
+    this.lastError = null;
 
     try {
       // Baixa antes do backup: se o download falhar, o current.csv continua intacto.
@@ -60,8 +63,10 @@ class Scheduler {
       console.log('🧹 Limpando arquivos antigos...');
       fileManager.cleanupOldFiles();
 
+      this.lastSuccess = new Date();
       console.log('✅ Atualização automática concluída com sucesso');
     } catch (error) {
+      this.lastError = error.message;
       console.error('❌ Erro na atualização automática:', error.message);
     } finally {
       this.isRunning = false;
@@ -71,7 +76,16 @@ class Scheduler {
 
   async runManualUpdate() {
     console.log('🔄 Atualização manual solicitada...');
+
+    if (this.isRunning) {
+      throw new Error('Atualização já em andamento');
+    }
+
     await this.runDailyUpdate();
+
+    if (this.lastError) {
+      throw new Error(this.lastError);
+    }
   }
 
   updateNextRunTime() {
@@ -91,6 +105,8 @@ class Scheduler {
       enabled: this.shouldEnableScheduler(),
       running: this.isRunning,
       lastRun: this.lastRun,
+      lastSuccess: this.lastSuccess,
+      lastError: this.lastError,
       nextRun: this.nextRun,
       schedule: '00:00 (diário)'
     };

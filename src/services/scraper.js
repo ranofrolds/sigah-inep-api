@@ -46,10 +46,14 @@ async function downloadRegion(page, region) {
   await navigateToInepSite(page);
   await selectRegion(page, region);
   await applyFilters(page);
-  await logSchoolCount(page);
+  const expectedRows = await readSchoolCount(page, region);
+
+  if (expectedRows >= INEP_EXPORT_ROW_LIMIT) {
+    throw new Error(`Região ${region} tem ${expectedRows} escolas, acima do limite de ${INEP_EXPORT_ROW_LIMIT} do export do INEP: dividir o download por UF`);
+  }
 
   const filePath = await downloadCsvFile(page, `regiao_${region}.tmp`);
-  assertNotTruncated(filePath, region);
+  assertComplete(filePath, region, expectedRows);
   return filePath;
 }
 
@@ -124,16 +128,17 @@ async function applyFilters(page) {
   await page.waitForTimeout(5000);
 }
 
-async function logSchoolCount(page) {
-  try {
-    const bodyText = await page.textContent('body');
-    const match = bodyText.match(/Foram selecionadas[^0-9]*([0-9.]+)[^0-9]*escolas/);
-    if (match) {
-      console.log(`📊 ${match[0]}`);
-    }
-  } catch {
-    // Ignore if can't find school count
+// Sem esse total não dá para saber se o CSV veio cortado, então falha em vez de seguir.
+async function readSchoolCount(page, region) {
+  const bodyText = await page.textContent('body');
+  const match = bodyText.match(/Foram selecionadas[^0-9]*([0-9.]+)[^0-9]*escolas/);
+
+  if (!match) {
+    throw new Error(`Total de escolas da região ${region} não encontrado na página do INEP`);
   }
+
+  console.log(`📊 ${match[0]}`);
+  return parseInt(match[1].replace(/\./g, ''), 10);
 }
 
 async function downloadCsvFile(page, fileName) {
@@ -157,11 +162,11 @@ function readCsvLines(filePath) {
   return fs.readFileSync(filePath, 'utf8').split(/\r?\n/).filter(line => line.length > 0);
 }
 
-function assertNotTruncated(filePath, region) {
+function assertComplete(filePath, region, expectedRows) {
   const dataRows = readCsvLines(filePath).length - 1;
 
-  if (dataRows >= INEP_EXPORT_ROW_LIMIT) {
-    throw new Error(`Export da região ${region} atingiu o limite de ${INEP_EXPORT_ROW_LIMIT} linhas do INEP`);
+  if (dataRows !== expectedRows) {
+    throw new Error(`Export da região ${region} veio com ${dataRows} escolas, mas a página do INEP mostra ${expectedRows}`);
   }
 
   console.log(`✅ ${region}: ${dataRows} escolas`);
