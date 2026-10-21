@@ -5,6 +5,12 @@ const config = require('../config');
 
 // O export CSV do INEP corta em 100.000 linhas; cada região fica abaixo disso.
 const INEP_EXPORT_ROW_LIMIT = 100000;
+const REGION_ATTEMPTS = 3;
+const COUNT_WAIT_TIMEOUT_MS = 120000;
+const COUNT_SETTLE_MS = 3000;
+const COUNT_POLL_INTERVAL_MS = 1000;
+const PAGE_TIMEOUT_MS = 120000;
+const COUNT_PATTERN = /Foram selecionadas[^0-9]*([0-9.]+)[^0-9]*escolas/;
 const REGIONS = ['Norte', 'Nordeste', 'Centro-Oeste', 'Sudeste', 'Sul'];
 
 async function downloadInepData() {
@@ -23,16 +29,20 @@ async function downloadInepData() {
     });
     
     const page = await context.newPage();
-    const regionFiles = [];
+    const regionResults = [];
 
     try {
+      const unfilteredTotal = await withRetries('Total geral', () => readUnfilteredTotal(page));
+
       for (const region of REGIONS) {
-        regionFiles.push(await downloadRegion(page, region));
+        regionResults.push(await withRetries(region, () => tryDownloadRegion(page, region, unfilteredTotal)));
       }
 
+      assertSumMatchesTotal(regionResults, unfilteredTotal);
+      const regionFiles = regionResults.map(result => result.filePath);
       return mergeCsvFiles(regionFiles, path.join(config.inep.downloadPath, generateFileName()));
     } finally {
-      regionFiles.forEach(file => fs.rmSync(file, { force: true }));
+      regionResults.forEach(result => fs.rmSync(result.filePath, { force: true }));
     }
     
   } finally {
@@ -40,21 +50,49 @@ async function downloadInepData() {
   }
 }
 
-async function downloadRegion(page, region) {
+class LimitExceededError extends Error {}
+
+async function withRetries(label, action) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= REGION_ATTEMPTS; attempt++) {
+    try {
+      return await action();
+    } catch (error) {
+      if (error instanceof LimitExceededError) {
+        throw error;
+      }
+      lastError = error;
+      console.log(`⚠️ ${label}: tentativa ${attempt}/${REGION_ATTEMPTS} falhou: ${error.message}`);
+    }
+  }
+
+  throw lastError;
+}
+
+// Total sem filtro de região ("Todos os Valores"): serve para conferir a soma e para
+// reconhecer o valor transitório que a página mostra antes de aplicar o filtro.
+async function readUnfilteredTotal(page) {
+  console.log('🧮 Lendo o total geral do INEP...');
+  await navigateToInepSite(page);
+  const countText = await applyAndWaitForCount(page, null, 'geral');
+  return parseCount(countText);
+}
+
+async function tryDownloadRegion(page, region, unfilteredTotal) {
   console.log(`🗺️ Região: ${region}`);
 
   await navigateToInepSite(page);
   await selectRegion(page, region);
-  await applyFilters(page);
-  const expectedRows = await readSchoolCount(page, region);
+  const expectedRows = parseCount(await applyAndWaitForCount(page, unfilteredTotal, `da região ${region}`));
 
   if (expectedRows >= INEP_EXPORT_ROW_LIMIT) {
-    throw new Error(`Região ${region} tem ${expectedRows} escolas, acima do limite de ${INEP_EXPORT_ROW_LIMIT} do export do INEP: dividir o download por UF`);
+    throw new LimitExceededError(`Região ${region} tem ${expectedRows} escolas, acima do limite de ${INEP_EXPORT_ROW_LIMIT} do export do INEP: dividir o download por UF`);
   }
 
   const filePath = await downloadCsvFile(page, `regiao_${region}.tmp`);
   assertComplete(filePath, region, expectedRows);
-  return filePath;
+  return { filePath, rows: expectedRows };
 }
 
 function ensureDownloadDirectory() {
@@ -66,8 +104,8 @@ function ensureDownloadDirectory() {
 async function navigateToInepSite(page) {
   console.log('📍 Acessando site do INEP...');
   // networkidle nunca chega: o dashboard do INEP fica fazendo requisições em segundo plano
-  await page.goto(config.inep.url, { waitUntil: 'domcontentloaded', timeout: 90000 });
-  await page.waitForSelector('input[id^="saw_"]', { timeout: 90000 });
+  await page.goto(config.inep.url, { waitUntil: 'domcontentloaded', timeout: PAGE_TIMEOUT_MS });
+  await page.waitForSelector('input[id^="saw_"]', { timeout: PAGE_TIMEOUT_MS });
   await page.waitForTimeout(2000);
 }
 
@@ -119,26 +157,48 @@ async function isRegionField(input) {
   return labelText.includes('Região');
 }
 
-async function applyFilters(page) {
+async function applyAndWaitForCount(page, rejectedTotal, label) {
   console.log('🔍 Aplicando filtros...');
-  const applyButton = await page.waitForSelector('a:text("Aplicar")', { timeout: 5000 });
+  const applyButton = await page.waitForSelector('a:text("Aplicar")', { timeout: 30000 });
   await applyButton.click();
-  
-  console.log('⏳ Aguardando processamento...');
-  await page.waitForTimeout(5000);
+
+  console.log('⏳ Aguardando o total...');
+  const countText = await waitForCountText(page, rejectedTotal, label);
+  console.log(`📊 ${countText}`);
+  return countText;
+}
+
+async function readCountText(page) {
+  const bodyText = await page.textContent('body');
+  const match = bodyText.match(COUNT_PATTERN);
+  return match ? match[0] : null;
 }
 
 // Sem esse total não dá para saber se o CSV veio cortado, então falha em vez de seguir.
-async function readSchoolCount(page, region) {
-  const bodyText = await page.textContent('body');
-  const match = bodyText.match(/Foram selecionadas[^0-9]*([0-9.]+)[^0-9]*escolas/);
+// Ignora o total geral (valor transitório de antes do filtro valer) e espera o valor assentar.
+async function waitForCountText(page, rejectedTotal, label) {
+  const deadline = Date.now() + COUNT_WAIT_TIMEOUT_MS;
 
-  if (!match) {
-    throw new Error(`Total de escolas da região ${region} não encontrado na página do INEP`);
+  while (Date.now() < deadline) {
+    const text = await readCountText(page);
+
+    if (text && parseCount(text) !== rejectedTotal) {
+      await page.waitForTimeout(COUNT_SETTLE_MS);
+      const settled = await readCountText(page);
+
+      if (settled && parseCount(settled) !== rejectedTotal) {
+        return settled;
+      }
+    }
+
+    await page.waitForTimeout(COUNT_POLL_INTERVAL_MS);
   }
 
-  console.log(`📊 ${match[0]}`);
-  return parseInt(match[1].replace(/\./g, ''), 10);
+  throw new Error(`Total de escolas ${label} não apareceu na página do INEP em ${COUNT_WAIT_TIMEOUT_MS / 1000}s`);
+}
+
+function parseCount(countText) {
+  return parseInt(countText.match(COUNT_PATTERN)[1].replace(/\./g, ''), 10);
 }
 
 async function downloadCsvFile(page, fileName) {
@@ -172,8 +232,28 @@ function assertComplete(filePath, region, expectedRows) {
   console.log(`✅ ${region}: ${dataRows} escolas`);
 }
 
+// Confere a soma das regiões com o total sem filtro mostrado na página (quando ele aparece).
+function assertSumMatchesTotal(regionResults, unfilteredTotal) {
+  const sum = regionResults.reduce((acc, result) => acc + result.rows, 0);
+
+  if (sum !== unfilteredTotal) {
+    throw new Error(`Soma das regiões (${sum}) difere do total do INEP sem filtro (${unfilteredTotal})`);
+  }
+
+  console.log(`✅ Soma das regiões confere com o total do INEP: ${unfilteredTotal}`);
+}
+
+function assertSameHeader(filePaths) {
+  const [expected, ...others] = filePaths.map(file => readCsvLines(file)[0]);
+
+  if (others.some(header => header !== expected)) {
+    throw new Error('Cabeçalhos dos CSVs das regiões são diferentes: junção abortada');
+  }
+}
+
 // Mantém o cabeçalho (com BOM) do primeiro arquivo e descarta o dos demais.
 function mergeCsvFiles(filePaths, outputPath) {
+  assertSameHeader(filePaths);
   const [firstFile, ...otherFiles] = filePaths;
   const lines = [
     ...readCsvLines(firstFile),
